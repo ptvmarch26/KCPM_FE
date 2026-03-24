@@ -5,6 +5,7 @@ import DeviceManagementPage from "../admin/pages/DeviceManagementPage";
 import MaintenancePlanManagementPage from "../admin/pages/MaintenancePlanManagementPage";
 import RepairPlanManagementPage from "../admin/pages/RepairPlanManagementPage";
 import AdminLayout from "../admin/layout/AdminLayout";
+import NotFoundPage from "../admin/pages/NotFoundPage";
 
 const routes = [
   {
@@ -47,6 +48,12 @@ const routes = [
     layout: AdminLayout,
     isPrivate: true,
     allowedRoles: ["admin"],
+  },
+  {
+    path: "*",
+    element: <NotFoundPage />,
+    layout: null,
+    isPrivate: false,
   },
 ];
 
