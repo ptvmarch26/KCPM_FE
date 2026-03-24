@@ -6,7 +6,10 @@ function TopbarComponent({ adminName = "Admin", toggleSidebar }) {
 
   const pageTitles = {
     "/admin/dashboard": "Dashboard",
+    "/admin/devices": "Quản lý thiết bị",
     "/admin/users": "Quản lý nhân viên",
+    "/admin/maintenances": "Quản lý bảo trì",
+    "/admin/repairs": "Quản lý sửa chữa",
   };
 
   let currentPage = "Admin Panel";

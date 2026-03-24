@@ -1,21 +1,56 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiHome, FiUsers, FiLogOut } from "react-icons/fi";
+import { MdDevices } from "react-icons/md";
+import { GiAutoRepair } from "react-icons/gi";
+import { useAuth } from "../../../context/AuthContext";
 
 function SidebarComponent({ isOpen, toggleSidebar }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { currentUser, handleLogout } = useAuth();
+
+  const handleUserLogout = () => {
+    handleLogout();
+    toggleSidebar();
+    navigate("/admin/login", { replace: true });
+  };
 
   const menuItems = [
     {
       name: "Dashboard",
       path: "/admin/dashboard",
       icon: <FiHome size={20} />,
+      allowedRoles: ["admin", "technician"],
+    },
+    {
+      name: "Quản lý thiết bị",
+      path: "/admin/devices",
+      icon: <MdDevices size={20} />,
+      allowedRoles: ["admin", "technician"],
     },
     {
       name: "Quản lý nhân viên",
       path: "/admin/users",
       icon: <FiUsers size={20} />,
+      allowedRoles: ["admin"],
+    },
+    {
+      name: "Quản lý bảo trì",
+      path: "/admin/maintenances",
+      icon: <GiAutoRepair size={20} />,
+      allowedRoles: ["admin"],
+    },
+    {
+      name: "Quản lý sửa chữa",
+      path: "/admin/repairs",
+      icon: <GiAutoRepair size={20} />,
+      allowedRoles: ["admin"],
     },
   ];
+
+  const filteredMenuItems = menuItems.filter((item) =>
+    item.allowedRoles.includes(currentUser?.role)
+  );
 
   return (
     <>
@@ -42,7 +77,7 @@ function SidebarComponent({ isOpen, toggleSidebar }) {
 
         <nav className="p-3">
           <ul className="space-y-2">
-            {menuItems.map((item) => {
+            {filteredMenuItems.map((item) => {
               const isActive = location.pathname === item.path;
 
               return (
@@ -70,6 +105,7 @@ function SidebarComponent({ isOpen, toggleSidebar }) {
             <li className="pt-4">
               <button
                 type="button"
+                onClick={handleUserLogout}
                 className="flex items-center gap-3 p-4 rounded-md transition-all duration-200 text-red-400 hover:bg-red-600 hover:text-white w-full"
               >
                 <FiLogOut size={20} />
