@@ -40,14 +40,14 @@ const routes = [
     element: <MaintenancePlanManagementPage />,
     layout: AdminLayout,
     isPrivate: true,
-    allowedRoles: ["admin"],
+    allowedRoles: ["admin", "technician"],
   },
   {
     path: "/admin/repairs",
     element: <RepairPlanManagementPage />,
     layout: AdminLayout,
     isPrivate: true,
-    allowedRoles: ["admin"],
+    allowedRoles: ["admin", "technician"],
   },
   {
     path: "*",

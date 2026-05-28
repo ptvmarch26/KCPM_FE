@@ -1,16 +1,73 @@
-# React + Vite
+# [SE113.Q21 - Frontend]
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend admin dashboard cho hệ thống quản lý bảo trì và sửa chữa thiết bị.
 
-Currently, two official plugins are available:
+Ứng dụng sử dụng React, Vite, Ant Design và Tailwind CSS để xây dựng giao diện admin với xác thực JWT, điều hướng theo vai trò và kết nối API backend.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tính năng chính
 
-## React Compiler
+- Đăng nhập admin/technician qua `/admin/login`
+- Dashboard tổng quan với thống kê thiết bị, kế hoạch bảo trì, yêu cầu sửa chữa và lịch sử công việc
+- Quản lý người dùng: thêm, sửa, xóa, tìm kiếm và lọc
+- Quản lý thiết bị, kế hoạch bảo trì và yêu cầu sửa chữa (các trang đã có cấu trúc và route)
+- Hệ thống route bảo mật theo vai trò:
+  - `admin`: truy cập toàn bộ dashboard, quản lý user, device, maintenance, repair
+  - `technician`: truy cập dashboard và các chức năng kỹ thuật viên
+- Tự động refresh access token khi token hết hạn bằng refresh token
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Kiến trúc dự án
 
-## Expanding the ESLint configuration
+- `src/main.jsx`: khởi tạo React app, đăng ký các context provider
+- `src/App.jsx`: cấu hình router và kiểm soát route private/public
+- `src/routes/route.jsx`: định nghĩa route admin, dashboard, quản lý người dùng, thiết bị, bảo trì, sửa chữa
+- `src/context/`: chứa các Context quản lý trạng thái và gọi API
+  - `AuthContext.jsx`
+  - `UserContext.jsx`
+  - `DeviceContext.jsx`
+  - `MaintenancePlanContext.jsx`
+  - `RepairPlanContext.jsx`
+  - `WorkHistoryContext.jsx`
+- `src/services/api/`: file Axios instance và module API cho backend
+  - `AxiosInstance.js`
+  - `AuthApi.js`
+  - `UserApi.js`
+  - `DeviceApi.js`
+  - `MaintenancePlanApi.js`
+  - `RepairPlanApi.js`
+  - `WorkHistoryApi.js`
+- `src/admin/pages/`: các trang admin
+- `src/admin/layout/`: layout admin bao gồm sidebar và topbar
+- `src/components/`: các component UI dùng chung
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Yêu cầu backend
+
+Frontend này mặc định kết nối đến backend tại:
+
+- `http://localhost:5000`
+
+## Công nghệ sử dụng
+
+- React 19
+- Vite
+- Ant Design
+- Tailwind CSS
+- React Router DOM
+
+## Cài đặt
+
+```bash
+cd KCPM_FE
+npm install
+```
+
+## Chạy ứng dụng
+
+```bash
+npm run dev
+```
+
+Mở trình duyệt tại địa chỉ được hiển thị bởi Vite.
+
+## Cấu hình tùy chỉnh
+
+Nếu backend không chạy trên `http://localhost:5000`, chỉnh `baseURL` trong `src/services/api/AxiosInstance.js`.

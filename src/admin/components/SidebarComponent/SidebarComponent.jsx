@@ -38,18 +38,18 @@ function SidebarComponent({ isOpen, toggleSidebar }) {
       name: "Quản lý bảo trì",
       path: "/admin/maintenances",
       icon: <GiAutoRepair size={20} />,
-      allowedRoles: ["admin"],
+      allowedRoles: ["admin", "technician"],
     },
     {
       name: "Quản lý sửa chữa",
       path: "/admin/repairs",
       icon: <GiAutoRepair size={20} />,
-      allowedRoles: ["admin"],
+      allowedRoles: ["admin", "technician"],
     },
   ];
 
   const filteredMenuItems = menuItems.filter((item) =>
-    item.allowedRoles.includes(currentUser?.role)
+    item.allowedRoles.includes(currentUser?.role),
   );
 
   return (

@@ -8,51 +8,116 @@ import {
   ClockCircleOutlined,
   CalendarOutlined,
 } from "@ant-design/icons";
+import { useAuth } from "../../context/AuthContext";
 import { useDevice } from "../../context/DeviceContext";
 import { useMaintenancePlan } from "../../context/MaintenancePlanContext";
 import { useRepairPlan } from "../../context/RepairPlanContext";
+import { useWorkHistory } from "../../context/WorkHistoryContext";
 
 function DashboardPage() {
+  const { currentUser } = useAuth();
   const { deviceList, fetchDeviceList } = useDevice();
   const { maintenancePlanList, fetchMaintenancePlanList } =
     useMaintenancePlan();
   const { repairPlanList, fetchRepairPlanList } = useRepairPlan();
+  const { workHistoryList, fetchWorkHistoryByTechnician } = useWorkHistory();
+
+  const isAdmin = currentUser?.role === "admin";
+  const isTechnician = currentUser?.role === "technician";
+  const currentUserId = currentUser?._id;
 
   useEffect(() => {
     fetchDeviceList();
     fetchMaintenancePlanList();
     fetchRepairPlanList();
-  }, []);
+
+    if (isTechnician && currentUserId) {
+      fetchWorkHistoryByTechnician(currentUserId);
+    }
+  }, [isTechnician, currentUserId]);
+
+  const filteredMaintenancePlans = useMemo(() => {
+    if (!isTechnician) return maintenancePlanList || [];
+
+    return (maintenancePlanList || []).filter((item) => {
+      const technicianId =
+        item?.assigned_technician_id?._id || item?.assigned_technician_id;
+      return technicianId === currentUserId;
+    });
+  }, [maintenancePlanList, isTechnician, currentUserId]);
+
+  const filteredRepairPlans = useMemo(() => {
+    if (!isTechnician) return repairPlanList || [];
+
+    return (repairPlanList || []).filter((item) => {
+      const technicianId =
+        item?.assigned_technician_id?._id || item?.assigned_technician_id;
+      return technicianId === currentUserId;
+    });
+  }, [repairPlanList, isTechnician, currentUserId]);
+
+  const filteredDeviceList = useMemo(() => {
+    if (!isTechnician) return deviceList || [];
+
+    const relatedDeviceIds = new Set();
+
+    filteredMaintenancePlans.forEach((item) => {
+      const deviceId = item?.device_id?._id || item?.device_id;
+      if (deviceId) relatedDeviceIds.add(deviceId);
+    });
+
+    filteredRepairPlans.forEach((item) => {
+      const deviceId = item?.device_id?._id || item?.device_id;
+      if (deviceId) relatedDeviceIds.add(deviceId);
+    });
+
+    (workHistoryList || []).forEach((item) => {
+      const deviceId = item?.device_id?._id || item?.device_id;
+      if (deviceId) relatedDeviceIds.add(deviceId);
+    });
+
+    return (deviceList || []).filter((item) => relatedDeviceIds.has(item._id));
+  }, [
+    deviceList,
+    filteredMaintenancePlans,
+    filteredRepairPlans,
+    workHistoryList,
+    isTechnician,
+  ]);
 
   const dashboardStats = useMemo(() => {
-    const totalDevices = deviceList?.length || 0;
+    const totalDevices = filteredDeviceList?.length || 0;
     const activeDevices =
-      deviceList?.filter((item) => item.status === "active").length || 0;
+      filteredDeviceList?.filter((item) => item.status === "active").length ||
+      0;
     const underMaintenanceDevices =
-      deviceList?.filter((item) => item.status === "under_maintenance")
+      filteredDeviceList?.filter((item) => item.status === "under_maintenance")
         .length || 0;
     const brokenDevices =
-      deviceList?.filter((item) => item.status === "broken").length || 0;
-
-    const totalMaintenancePlans = maintenancePlanList?.length || 0;
-    const pendingMaintenancePlans =
-      maintenancePlanList?.filter((item) => item.status === "pending").length ||
+      filteredDeviceList?.filter((item) => item.status === "broken").length ||
       0;
+
+    const totalMaintenancePlans = filteredMaintenancePlans?.length || 0;
+    const pendingMaintenancePlans =
+      filteredMaintenancePlans?.filter((item) => item.status === "pending")
+        .length || 0;
     const inProgressMaintenancePlans =
-      maintenancePlanList?.filter((item) => item.status === "in_progress")
+      filteredMaintenancePlans?.filter((item) => item.status === "in_progress")
         .length || 0;
     const completedMaintenancePlans =
-      maintenancePlanList?.filter((item) => item.status === "completed")
+      filteredMaintenancePlans?.filter((item) => item.status === "completed")
         .length || 0;
 
-    const totalRepairPlans = repairPlanList?.length || 0;
+    const totalRepairPlans = filteredRepairPlans?.length || 0;
     const assignedRepairPlans =
-      repairPlanList?.filter((item) => item.status === "assigned").length || 0;
+      filteredRepairPlans?.filter((item) => item.status === "assigned")
+        .length || 0;
     const inProgressRepairPlans =
-      repairPlanList?.filter((item) => item.status === "in_progress").length ||
-      0;
+      filteredRepairPlans?.filter((item) => item.status === "in_progress")
+        .length || 0;
     const completedRepairPlans =
-      repairPlanList?.filter((item) => item.status === "completed").length || 0;
+      filteredRepairPlans?.filter((item) => item.status === "completed")
+        .length || 0;
 
     return {
       totalDevices,
@@ -68,10 +133,34 @@ function DashboardPage() {
       inProgressRepairPlans,
       completedRepairPlans,
     };
-  }, [deviceList, maintenancePlanList, repairPlanList]);
+  }, [filteredDeviceList, filteredMaintenancePlans, filteredRepairPlans]);
 
   const recentWorkHistory = useMemo(() => {
-    const maintenanceHistory = (maintenancePlanList || [])
+    if (isTechnician) {
+      return (workHistoryList || [])
+        .map((item) => ({
+          key: item._id,
+          work_type: item.work_type,
+          title: item.title,
+          device_name: item.device_id?.device_name || "—",
+          technician_name:
+            item.technician_id?.full_name ||
+            item.technician_id?.username ||
+            currentUser?.full_name ||
+            currentUser?.username ||
+            "—",
+          result: item.result || "—",
+          completed_at: item.completed_at,
+        }))
+        .sort(
+          (a, b) =>
+            new Date(b.completed_at || 0).getTime() -
+            new Date(a.completed_at || 0).getTime(),
+        )
+        .slice(0, 8);
+    }
+
+    const maintenanceHistory = (filteredMaintenancePlans || [])
       .filter((item) => item.status === "completed")
       .map((item) => ({
         key: `maintenance-${item._id}`,
@@ -86,7 +175,7 @@ function DashboardPage() {
         completed_at: item.completed_at,
       }));
 
-    const repairHistory = (repairPlanList || [])
+    const repairHistory = (filteredRepairPlans || [])
       .filter((item) => item.status === "completed")
       .map((item) => ({
         key: `repair-${item._id}`,
@@ -108,12 +197,18 @@ function DashboardPage() {
           new Date(a.completed_at || 0).getTime(),
       )
       .slice(0, 8);
-  }, [maintenancePlanList, repairPlanList]);
+  }, [
+    isTechnician,
+    workHistoryList,
+    filteredMaintenancePlans,
+    filteredRepairPlans,
+    currentUser,
+  ]);
 
   const upcomingTasks = useMemo(() => {
     const now = new Date();
 
-    const maintenanceTasks = (maintenancePlanList || [])
+    const maintenanceTasks = (filteredMaintenancePlans || [])
       .filter(
         (item) =>
           item.status !== "completed" &&
@@ -132,17 +227,32 @@ function DashboardPage() {
           "—",
       }));
 
-    return maintenanceTasks
+    const repairTasks = (filteredRepairPlans || [])
+      .filter((item) => item.status !== "completed")
+      .map((item) => ({
+        key: `upcoming-repair-${item._id}`,
+        type: "Sửa chữa",
+        title: item.title,
+        device: item.device_id?.device_name || "—",
+        date: item.assigned_at || item.created_at,
+        technician:
+          item.assigned_technician_id?.full_name ||
+          item.assigned_technician_id?.username ||
+          "—",
+      }));
+
+    return [...maintenanceTasks, ...repairTasks]
+      .filter((item) => item.date)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 5);
-  }, [maintenancePlanList]);
+  }, [filteredMaintenancePlans, filteredRepairPlans]);
 
   const expiringDevices = useMemo(() => {
     const now = new Date();
     const next30Days = new Date();
     next30Days.setDate(now.getDate() + 30);
 
-    return (deviceList || [])
+    return (filteredDeviceList || [])
       .filter((item) => item.warranty_expiry)
       .filter((item) => {
         const expiry = new Date(item.warranty_expiry);
@@ -154,7 +264,7 @@ function DashboardPage() {
           new Date(b.warranty_expiry).getTime(),
       )
       .slice(0, 5);
-  }, [deviceList]);
+  }, [filteredDeviceList]);
 
   const recentWorkColumns = [
     {
@@ -198,13 +308,32 @@ function DashboardPage() {
     },
   ];
 
+  if (!currentUser) {
+    return (
+      <div className="p-4 text-slate-500">Đang tải thông tin người dùng...</div>
+    );
+  }
+
   return (
     <div className="space-y-6 bg-slate-50 min-h-screen p-1">
+      <div className="mb-2">
+        <h2 className="text-xl font-semibold text-slate-800">
+          {isAdmin ? "Dashboard quản trị viên" : "Dashboard kỹ thuật viên"}
+        </h2>
+        <p className="text-sm text-slate-500 mt-1">
+          {isAdmin
+            ? "Tổng quan toàn hệ thống"
+            : "Tổng quan công việc được phân công cho bạn"}
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card className="rounded-xl shadow-sm border-0 bg-blue-50">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-slate-600 text-base">Tổng thiết bị</p>
+              <p className="text-slate-600 text-base">
+                {isAdmin ? "Tổng thiết bị" : "Thiết bị liên quan"}
+              </p>
               <h3 className="text-4xl font-bold mt-2">
                 {dashboardStats.totalDevices}
               </h3>
@@ -221,10 +350,10 @@ function DashboardPage() {
           </div>
         </Card>
 
-        <Card className="rounded-xl shadow-sm border-0 ">
+        <Card className="rounded-xl shadow-sm border-0">
           <div className="flex items-start justify-between">
             <div>
-              <p className=" text-base">Kế hoạch bảo trì</p>
+              <p className="text-base">Kế hoạch bảo trì</p>
               <h3 className="text-4xl font-bold mt-2">
                 {dashboardStats.totalMaintenancePlans}
               </h3>
@@ -264,7 +393,9 @@ function DashboardPage() {
         <Card className="rounded-xl shadow-sm border-0">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-slate-600 text-base">Tổng việc hoàn thành</p>
+              <p className="text-slate-600 text-base">
+                {isAdmin ? "Tổng việc hoàn thành" : "Việc bạn đã hoàn thành"}
+              </p>
               <h3 className="text-4xl font-bold mt-2">
                 {dashboardStats.completedMaintenancePlans +
                   dashboardStats.completedRepairPlans}
@@ -288,7 +419,11 @@ function DashboardPage() {
           title={
             <div className="flex items-center gap-2 text-slate-800">
               <CalendarOutlined className="text-orange-500" />
-              <span>Thiết bị sắp hết bảo hành</span>
+              <span>
+                {isAdmin
+                  ? "Thiết bị sắp hết bảo hành"
+                  : "Thiết bị bạn phụ trách sắp hết bảo hành"}
+              </span>
             </div>
           }
         >
@@ -339,7 +474,12 @@ function DashboardPage() {
                   className="flex items-center justify-between border-b last:border-b-0 pb-2"
                 >
                   <div>
-                    <p className="font-medium text-slate-800">{item.title}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-slate-800">{item.title}</p>
+                      <Tag color={item.type === "Bảo trì" ? "blue" : "orange"}>
+                        {item.type}
+                      </Tag>
+                    </div>
                     <p className="text-sm text-slate-500">
                       {item.device} • {item.technician}
                     </p>
@@ -356,7 +496,9 @@ function DashboardPage() {
 
       <div className="bg-white rounded-xl shadow-sm p-4">
         <h3 className="text-lg font-semibold mb-4 text-slate-800">
-          Công việc hoàn thành gần đây
+          {isAdmin
+            ? "Công việc hoàn thành gần đây"
+            : "Lịch sử công việc gần đây của bạn"}
         </h3>
 
         <Table

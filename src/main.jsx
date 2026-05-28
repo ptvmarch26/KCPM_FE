@@ -8,21 +8,24 @@ import { UserProvider } from "./context/UserContext";
 import { DeviceProvider } from "./context/DeviceContext";
 import { MaintenancePlanProvider } from "./context/MaintenancePlanContext";
 import { RepairPlanProvider } from "./context/RepairPlanContext";
+import { WorkHistoryProvider } from "./context/WorkHistoryContext";
 // import "antd/dist/reset.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <PopupProvider>
       <AuthProvider>
-        <DeviceProvider>
-          <MaintenancePlanProvider>
-            <RepairPlanProvider>
-              <UserProvider>
-                <App />
-              </UserProvider>
-            </RepairPlanProvider>
-          </MaintenancePlanProvider>
-        </DeviceProvider>
+        <WorkHistoryProvider>
+          <DeviceProvider>
+            <MaintenancePlanProvider>
+              <RepairPlanProvider>
+                <UserProvider>
+                  <App />
+                </UserProvider>
+              </RepairPlanProvider>
+            </MaintenancePlanProvider>
+          </DeviceProvider>
+        </WorkHistoryProvider>
       </AuthProvider>
     </PopupProvider>
   </StrictMode>,
